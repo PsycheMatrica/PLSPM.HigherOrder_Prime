@@ -1,0 +1,152 @@
+function [INI,TABLE,ETC] = HigherOrderPLSPM(z0, W01,W02,B02,modetype1,modetype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% HigherOrderPLSPM() - MATLAB function to perform Partial Least Sqaures   %
+%                      Path Modeling (PLSPM) with higher-order constructs %
+% Author: Gyeongcheol Cho & Heungsun Hwang                                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Input arguments:                                                        %
+%   Data = an N by J matrix of scores for N individuals on J indicators   %
+%   W01 = a J by P1 matrix of weight parameters for indicators            %
+%   W02 = a P1 by P2 matrix of weight parameters for 1st-order constructs %
+%   B02 = a P2 by P2 matrix of path coefficients between 2nd-order        %
+%          constructs                                                     %
+%   modetype1 = a vector of length P1 indicating the mode of each         %
+%              1st-order construct (1 = mode A, 2 = mode B)               %
+%   modetype2 = a vector of length P1 indicating the mode of each         %
+%              2nd-order construct (1 = mode A, 2 = mode B)               %
+%   scheme = an integer indicating the scheme for updating inner weights  % 
+%              (1 = centroid, 2 = factorial, 3 = path weighting)          %
+%   ind_sign1 = a vector of length P1 representing the sign-fixing        %
+%               indicator of each 1st-order construct                     %
+%   ind_sign2 = a vector of length P2 representing the sign-fixing        % 
+%               indicator of each 2nd-order construct                     %
+%   N_Boot = Integer representing the number of bootstrap samples for     %
+%            calculating standard errors (SE) and 95% confidence          %
+%            intervals (CI)                                               %
+%   Max_iter = Maximum number of iterations for the Alternating Least     % 
+%              Squares (ALS) algorithm                                    %
+%   Min_limit = Tolerance level for ALS algorithm                         %
+%   Flag_Parallel = Logical value to determine whether to use parallel    %
+%                   computing for bootstrapping                           %
+% Output arguments:                                                       %
+%   INI: Structure array containing goodness-of-fit values, R-squared     % 
+%        values, and matrices parameter estimates                         %
+%     .iter = Number of iterations for the ALS algorithm                  %
+%     .W1: a J by P1 matrix of weight estimates for indicators            %
+%     .W2: a P1 by P2 matrix of weight estimates for 1st-order constructs %
+%     .C: a P1 by J matrix of loading estimates for indicators            %
+%     .B: a P by P matrix of path coefficient estimates                   %
+%     .CVscore1: a N by P1 score matrix for 1st-order constructs          %
+%     .CVscore2: a N by P2 score matrix for 2nd-order constructs          %
+%  TABLE: Structure array containing tables of parameter estimates, their %
+%         SEs, 95% CIs,and other statistics                               %
+%     .W1: Table for weight estimates for indicators                      %
+%     .W2: Table for weight estimates for 1st-order constructs            %
+%     .C: Table for loading estimates for indicators                      %
+%     .B: Table for path coefficients estimates                           %
+%  ETC: Structure array including bootstrapped parameter estmates         %
+%     .W1_Boot: Matrix of bootstrapped weight estimates                   %
+%     .W2_Boot: Matrix of bootstrapped weight estimates                   %
+%     .C_Boot: Matrix of bootstrapped loading estimates                   %
+%     .B_Boot: Matrix of bootstrapped path coefficient estimates          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note:                                                                   %
+% 1. This function utilizes ALS_BasicPLSPM() in BasicPLSPM package v1.1.0 %
+%           (Hwang & Cho, 2024)                                           %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[J,P1] = size(W01);
+P2 = size(W02,2);  
+N = size(z0,1);
+%% Initialization 
+W01=W01~=0; Nw1=sum(sum(W01,1),2);
+W02=W02~=0; Nw2=sum(sum(W02,1),2);
+C0=W01';   Nc=sum(sum(C0,1),2);
+C02=W02';   Nc2=sum(sum(C02,1),2);
+B02=B02~=0; Nb2=sum(sum(B02,1),2);
+B0=[false(P1,P1+P2);[C02,B02]]; Nb=Nc2+Nb2; 
+B01=(W02*B02*W02')~=0;
+ind_Bdep=sum(B02,1)>0; Py = sum(ind_Bdep,2);
+
+[est_W1,est_W2,est_C,est_B,it1,it2,Converge,Gamma1,Gamma2] = ...
+   ALS_HigherOrderPLSPM(z0,W01,W02,B01,B02,...
+                         modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
+                         Max_iter,Min_limit,N,J,P1,P2);
+INI.iter1 = it1;
+INI.iter2 = it2;
+INI.Converge=Converge;
+INI.W1 = est_W1;
+INI.W2 = est_W2;
+INI.C = est_C;
+INI.B = est_B;
+INI.CVscore1 = Gamma1*sqrt(N);
+INI.CVscore2 = Gamma2*sqrt(N);
+
+if N_Boot<100
+   TABLE.W1=[est_W1(W01),NaN(Nw1,5)];
+   TABLE.W2=[est_W2(W02),NaN(Nw2,5)];
+   TABLE.C=[est_C(C0),NaN(Nc,5)];
+   TABLE.B=[est_B(B0),NaN(Nb,5)];
+   ETC.W1_Boot=[];
+   ETC.W2_Boot=[];
+   ETC.C_Boot=[];
+   ETC.B_Boot=[];  
+else
+   W1_Boot=zeros(Nw1,N_Boot);
+   W2_Boot=zeros(Nw2,N_Boot);
+   C_Boot=zeros(Nc,N_Boot);
+   B_Boot=zeros(Nb,N_Boot);
+   if Flag_Parallel
+       parfor b=1:N_Boot
+           [Z_ib,~]=GC_Boot(z0);
+            [W1_b,W2_b,C_b,B_b,~,~,~,~,~] = ...
+               ALS_HigherOrderPLSPM(Z_ib,W01,W02,B01,B02,...
+                                    modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
+                                    Max_iter,Min_limit,N,J,P1,P2);    
+           W1_Boot(:,b)=W1_b(W01);
+           W2_Boot(:,b)=W2_b(W02);
+           C_Boot(:,b)=C_b(C0);        
+           B_Boot(:,b)=B_b(B0);
+       end
+   else
+       for b=1:N_Boot
+           [Z_ib,~]=GC_Boot(z0);
+           if rem(b,100)==1; fprintf("Bootstrapping %d\n", b); end
+            [W1_b,W2_b,C_b,B_b,~,~,~,~,~] = ...
+               ALS_HigherOrderPLSPM(Z_ib,W01,W02,B01,B02,...
+                                    modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
+                                    Max_iter,Min_limit,N,J,P1,P2);
+           W1_Boot(:,b)=W1_b(W01);
+           W2_Boot(:,b)=W2_b(W02);  
+           C_Boot(:,b)=C_b(C0);       
+           B_Boot(:,b)=B_b(B0);
+       end
+   end
+% (5) Calculation of statistics
+   alpha=.05;
+   CI=[alpha/2,alpha,1-alpha,1-(alpha/2)];
+   loc_CI=round(CI*(N_Boot-1))+1; % .025 .05 .95 .975
+% basic statistics for parameter
+   TABLE.W1=para_stat(est_W1(W01),W1_Boot,loc_CI);
+   TABLE.W2=para_stat(est_W2(W02),W2_Boot,loc_CI);
+   TABLE.C=para_stat(est_C(C0),C_Boot,loc_CI); 
+   if Py>0; TABLE.B=para_stat(est_B(B0),B_Boot,loc_CI); end
+   ETC.W1_Boot=W1_Boot;
+   ETC.W2_Boot=W2_Boot;
+   ETC.C_Boot=C_Boot;
+   if Py>0; ETC.B_Boot=B_Boot; end
+end
+end
+function Table=para_stat(est_mt,boot_mt,CI_mp)
+   boot_mt=sort(boot_mt,2);
+   SE=std(boot_mt,0,2);
+   Table=[est_mt,SE,boot_mt(:,CI_mp(1,1)),boot_mt(:,CI_mp(1,4))]; 
+end
+function [in_sample,out_sample,index,N_oob]=GC_Boot(Data)
+   N=size(Data,1); 
+   index=ceil(N*rand(N,1));
+   in_sample=Data(index,:); 
+   index_oob=(1:N)'; index_oob(index)=[];
+   out_sample=Data(index_oob,:);
+   N_oob=length(index_oob);
+end
