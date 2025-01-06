@@ -1,13 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Illustration for HigherOrder_PLSPM Prime package                        %
+% Illustration for PLSPM.HigherOrder_Prime package                        %
 %   Author: Gyeongcheol Cho & Heungsun Hwang                              %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Description:                                                            %
-%   - This code aims to illustrate how to use HigherOrderPLSPM Prime      %
+%   - This code aims to illustrate how to use PLSPM.HigherOrder Prime     %
 %        package.                                                         %
 %   - The illustration uses Bergami and Bagozzi’s (2000) organizational   % 
 %        identification data                                              %
-%   - This package is dependent on BasicPLSPM_Package (Hwang & Cho, 2024) %
+%   - This package is dependent on PLSPM.Basic_Package (Hwang & Cho, 2024) %
 %     If you haven't installed this package, run the following command    %
 %           Check_Dependencies                                            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
