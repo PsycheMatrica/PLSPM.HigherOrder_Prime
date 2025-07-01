@@ -1,4 +1,4 @@
-function [INI,TABLE,ETC] = HigherOrderPLSPM(z0, W01,W02,B02,modetype1,modetype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel)
+function Results = HigherOrderPLSPM(z0, W01,W02,B02,mode_type1,mode_type2,correct_type1,correct_type2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % HigherOrderPLSPM() - MATLAB function to perform Partial Least Sqaures   %
 %                      Path Modeling (PLSPM) with higher-order constructs %
@@ -10,10 +10,14 @@ function [INI,TABLE,ETC] = HigherOrderPLSPM(z0, W01,W02,B02,modetype1,modetype2,
 %   W02 = a P1 by P2 matrix of weight parameters for 1st-order constructs %
 %   B02 = a P2 by P2 matrix of path coefficients between 2nd-order        %
 %          constructs                                                     %
-%   modetype1 = a vector of length P1 indicating the mode of each         %
-%              1st-order construct (1 = mode A, 2 = mode B)               %
-%   modetype2 = a vector of length P1 indicating the mode of each         %
-%              2nd-order construct (1 = mode A, 2 = mode B)               %
+%   mode_type1 = a vector of length P1 indicating the mode of each        %
+%                1st-order construct (1 = mode A, 2 = mode B)             %
+%   mode_type2 = a vector of length P1 indicating the mode of each        %
+%                2nd-order construct (1 = mode A, 2 = mode B)             %
+%   correct_type1 = a vector of length P1 indicating the type of each     %
+%                   1st-order construct (0 = component, 1 = factor)       %
+%   correct_type2 = a vector of length P2 indicating the type of each     %
+%                   2nd-order construct (0 = component, 1 = factor)       %
 %   scheme = an integer indicating the scheme for updating inner weights  % 
 %              (1 = centroid, 2 = factorial, 3 = path weighting)          %
 %   ind_sign1 = a vector of length P1 representing the sign-fixing        %
@@ -29,7 +33,11 @@ function [INI,TABLE,ETC] = HigherOrderPLSPM(z0, W01,W02,B02,modetype1,modetype2,
 %   Flag_Parallel = Logical value to determine whether to use parallel    %
 %                   computing for bootstrapping                           %
 % Output arguments:                                                       %
-%   INI: Structure array containing goodness-of-fit values, R-squared     % 
+%   Results: Structure array containing (1) results from the original     %
+%       sample (INI); (2) summary tables with standard errors and         %
+%       confidence intervals (TABLE); and (3) bootstrap estimates for     %
+%       various parameter sets (ETC).                                     %    
+%   .INI: Structure array containing goodness-of-fit values, R-squared    % 
 %        values, and matrices parameter estimates                         %
 %     .iter = Number of iterations for the ALS algorithm                  %
 %     .W1: a J by P1 matrix of weight estimates for indicators            %
@@ -38,21 +46,20 @@ function [INI,TABLE,ETC] = HigherOrderPLSPM(z0, W01,W02,B02,modetype1,modetype2,
 %     .B: a P by P matrix of path coefficient estimates                   %
 %     .CVscore1: a N by P1 score matrix for 1st-order constructs          %
 %     .CVscore2: a N by P2 score matrix for 2nd-order constructs          %
-%  TABLE: Structure array containing tables of parameter estimates, their %
+%  .TABLE: Structure array containing tables of parameter estimates, their%
 %         SEs, 95% CIs,and other statistics                               %
 %     .W1: Table for weight estimates for indicators                      %
 %     .W2: Table for weight estimates for 1st-order constructs            %
 %     .C: Table for loading estimates for indicators                      %
 %     .B: Table for path coefficients estimates                           %
-%  ETC: Structure array including bootstrapped parameter estmates         %
+%  .ETC: Structure array including bootstrapped parameter estmates        %
 %     .W1_Boot: Matrix of bootstrapped weight estimates                   %
 %     .W2_Boot: Matrix of bootstrapped weight estimates                   %
 %     .C_Boot: Matrix of bootstrapped loading estimates                   %
 %     .B_Boot: Matrix of bootstrapped path coefficient estimates          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Note:                                                                   %
-% 1. This function utilizes ALS_BasicPLSPM() in BasicPLSPM package v1.1.0 %
-%           (Hwang & Cho, 2024)                                           %
+% 1. This function utilizes BasicPLSPM package v1.4.1 (Cho & Hwang, 2024) %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [J,P1] = size(W01);
@@ -65,13 +72,27 @@ C0=W01';   Nc=sum(sum(C0,1),2);
 C02=W02';   Nc2=sum(sum(C02,1),2);
 B02=B02~=0; Nb2=sum(sum(B02,1),2);
 B0=[false(P1,P1+P2);[C02,B02]]; Nb=Nc2+Nb2; 
-B01=(W02*B02*W02')~=0;
+%B01=(W02*B02*W02')~=0;
+B01=triu(ones(P1,P1),1)~=0;
 ind_Bdep=sum(B02,1)>0; Py = sum(ind_Bdep,2);
-
-[est_W1,est_W2,est_C,est_B,it1,it2,Converge,Gamma1,Gamma2] = ...
+if size(ind_sign1,1)==0; [~,ind_sign1]=max(W01); end
+if size(ind_sign2,1)==0; [~,ind_sign2]=max(W02); end
+    
+correct_type_tp=zeros(1,P2);
+correct_type2_new=correct_type2;
+for p2=1:P2
+    p1=ind_sign2(p2);
+    if correct_type1(1,p1)==1
+        if correct_type2(1,p2)==0; correct_type2_new(p2)=2; 
+        elseif correct_type2(p2)==1; correct_type2_new(p2)=3;
+        end
+    end
+end
+[est_W1,est_W2,est_C,est_B,it1,it2,Converge,Gamma1,Gamma2,Cov_CV1,Cov_CV2] = ...
    ALS_HigherOrderPLSPM(z0,W01,W02,B01,B02,...
-                         modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
-                         Max_iter,Min_limit,N,J,P1,P2);
+                        mode_type1,mode_type2,correct_type1,correct_type_tp,correct_type2_new,scheme, ...
+                        ind_sign1,ind_sign2,...
+                        Max_iter,Min_limit,N,J,P1,P2);
 INI.iter1 = it1;
 INI.iter2 = it2;
 INI.Converge=Converge;
@@ -79,6 +100,8 @@ INI.W1 = est_W1;
 INI.W2 = est_W2;
 INI.C = est_C;
 INI.B = est_B;
+INI.Cov_CV1 = Cov_CV1;
+INI.Cov_CV2 = Cov_CV2;
 INI.CVscore1 = Gamma1*sqrt(N);
 INI.CVscore2 = Gamma2*sqrt(N);
 
@@ -99,9 +122,10 @@ else
    if Flag_Parallel
        parfor b=1:N_Boot
            [Z_ib,~]=GC_Boot(z0);
-            [W1_b,W2_b,C_b,B_b,~,~,~,~,~] = ...
+            [W1_b,W2_b,C_b,B_b,~,~,~,~,~,~,~] = ...
                ALS_HigherOrderPLSPM(Z_ib,W01,W02,B01,B02,...
-                                    modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
+                                    mode_type1,mode_type2,correct_type1,correct_type_tp,correct_type2_new,scheme, ...
+                                    ind_sign1,ind_sign2,...
                                     Max_iter,Min_limit,N,J,P1,P2);    
            W1_Boot(:,b)=W1_b(W01);
            W2_Boot(:,b)=W2_b(W02);
@@ -112,9 +136,10 @@ else
        for b=1:N_Boot
            [Z_ib,~]=GC_Boot(z0);
            if rem(b,100)==1; fprintf("Bootstrapping %d\n", b); end
-            [W1_b,W2_b,C_b,B_b,~,~,~,~,~] = ...
+            [W1_b,W2_b,C_b,B_b,~,~,~,~,~,~,~] = ...
                ALS_HigherOrderPLSPM(Z_ib,W01,W02,B01,B02,...
-                                    modetype1,modetype2,scheme,ind_sign1,ind_sign2,...
+                                    mode_type1,mode_type2,correct_type1,correct_type_tp,correct_type2_new,scheme, ...
+                                    ind_sign1,ind_sign2,...
                                     Max_iter,Min_limit,N,J,P1,P2);
            W1_Boot(:,b)=W1_b(W01);
            W2_Boot(:,b)=W2_b(W02);  
@@ -136,6 +161,9 @@ else
    ETC.C_Boot=C_Boot;
    if Py>0; ETC.B_Boot=B_Boot; end
 end
+Results.INI=INI;
+Results.TABLE=TABLE;
+Results.ETC=ETC;
 end
 function Table=para_stat(est_mt,boot_mt,CI_mp)
    boot_mt=sort(boot_mt,2);

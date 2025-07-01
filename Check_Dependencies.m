@@ -1,7 +1,7 @@
 fprintf('\n Below is the list of dependent packages for HigherOrderPLSPM_Prime.') 
 
 dependencies = {...
-    'BasicPLSPM_Prime', 'https://github.com/GyeongcheolCho/BasicPLSPM_Prime'};
+    'PLSPM.Basic_Prime', 'https://github.com/PsycheMatrica/PLSPM.Basic_Prime'};
 fprintf('\n     - %s',dependencies{1,1})
 addonsFolder = fullfile(getenv('APPDATA'), 'MathWorks', 'MATLAB Add-Ons', 'Collections');
 % Create the Collections folder if it doesn't exist

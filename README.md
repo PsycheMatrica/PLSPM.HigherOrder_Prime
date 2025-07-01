@@ -10,6 +10,8 @@ Gyeongcheol Cho and Heungsun Hwang
 - Estimate model parameters and calculate their standard errors (SE) along with 95% confidence intervals (CI).
 - Enable parallel computing for bootstrap sampling.
 - Allow users to specify a sign-fixing indicator for each component.
+- Provide an option for Dijkstra's correction.
+- Handle missing values in the data.
 
 ## Installation:
 To use this package in MATLAB:
@@ -22,10 +24,10 @@ To use this package in MATLAB:
     addpath(genpath('PLSPM.HigherOrder_Prime'))
    ```
 ## Dependencies:
-- This package is dependent on PLSPM.Basic_Package (Hwang & Cho, 2024) If you haven't installed this package, run the following command: `Check_Dependencies`                                          %
+- This package may be dependent on PLSPM.Basic_Package (Hwang & Cho, 2024). If you haven't installed this package, run the following command: `Check_Dependencies`                                          %
 
 ## Usage:
-- For examples on how to use the package, refer to the `Run_Example_HigherOrderPLSPM_Prime.m` file. This file demonstrates the implementation of `HigherOrderPLSPM_Prime()` using the `rick2.csv` dataset.
+- For examples on how to use the package, refer to the `Run_Example_HigherOrderPLSPM.m` file. This file demonstrates the implementation of `HigherOrderPLSPM()` using the `rick2.csv` dataset.
 
 ## Compatibility:
 - Tested on MATLAB R2023b.
