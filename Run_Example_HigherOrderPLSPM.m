@@ -23,8 +23,7 @@
 %        https://doi.org/10.1371/journal.pone.0306349                     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-help HigherOrderPLSPM()
-% Check_Dependencies
+help PLSPM_HigherOrder()
 
 %% Example 1) 2nd-order component with 1st-order Components
 
@@ -52,7 +51,7 @@ Max_iter = 500;              % maximum number of iterations
 Min_limit = 0.00001;            % convergence tolerance
 Flag_Parallel = false; %  1 = centroid, 2 = factorial, 3 = path weighting
 
-Results = HigherOrderPLSPM(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
+Results = PLSPM_HigherOrder(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
 INI=Results.INI;
 TABLE=Results.TABLE;
 ETC=Results.ETC;
@@ -101,7 +100,7 @@ Max_iter = 500;              % maximum number of iterations
 Min_limit = 0.00001;            % convergence tolerance
 Flag_Parallel = false; %  1 = centroid, 2 = factorial, 3 = path weighting
 
-Results = HigherOrderPLSPM(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
+Results = PLSPM_HigherOrder(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
 INI=Results.INI;
 INI.Converge
 INI.iter1
@@ -139,7 +138,7 @@ Max_iter = 500;              % maximum number of iterations
 Min_limit = 0.00001;            % convergence tolerance
 Flag_Parallel = false; %  1 = centroid, 2 = factorial, 3 = path weighting
 
-Results= HigherOrderPLSPM(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
+Results= PLSPM_HigherOrder(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
 INI=Results.INI;
 INI.Converge
 INI.iter1
@@ -178,7 +177,7 @@ Max_iter = 500;              % maximum number of iterations
 Min_limit = 0.00001;            % convergence tolerance
 Flag_Parallel = false; %  1 = centroid, 2 = factorial, 3 = path weighting
 
-Results= HigherOrderPLSPM(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
+Results= PLSPM_HigherOrder(z0, W01,W02,B0,modetype1,modetype2,correcttype1,correcttype2,scheme,ind_sign1,ind_sign2,N_Boot,Max_iter,Min_limit,Flag_Parallel);
 INI=Results.INI;
 INI
 INI.Converge
